@@ -149,14 +149,17 @@ def calculate_backoff_time(retry_count: int, settings: RetrySettings) -> float:
     """Calculate exponential backoff with jitter"""
     # Calculate base exponential backoff
     delay = min(
-        settings.max_delay, settings.base_delay * (settings.step_increase**retry_count)
+        settings.max_delay, settings.base_delay *
+        (settings.step_increase**retry_count)
     )
 
     # Add jitter to avoid thundering herd problem
-    jitter = random.uniform(1 - settings.jitter_factor, 1 + settings.jitter_factor)
+    jitter = random.uniform(1 - settings.jitter_factor,
+                            1 + settings.jitter_factor)
 
     # Ensure we stay within our bounds
-    final_delay = max(settings.min_delay, min(settings.max_delay, delay * jitter))
+    final_delay = max(settings.min_delay, min(
+        settings.max_delay, delay * jitter))
 
     return final_delay
 
@@ -336,6 +339,23 @@ AVAILABLE_MODELS = [
         is_chat_model=True,
         is_inference_model=True,
     ),
+    # Mistral / DevStral models via OpenRouter
+    AvailableModelOption(
+        id="openrouter/mistralai/devstral-small",
+        name="DevStral Small",
+        description="Mistral DevStral small coding model (OpenRouter)",
+        provider="mistralai",
+        is_chat_model=True,
+        is_inference_model=False,
+    ),
+    AvailableModelOption(
+        id="openrouter/qwen/qwen3-8b",
+        name="Qwen 3.0",
+        description="Qwen 3.0 model (OpenRouter)",
+        provider="qwen",
+        is_chat_model=False,
+        is_inference_model=True,
+    ),
 ]
 
 # Extract unique platform providers from the available models
@@ -351,13 +371,15 @@ class ProviderService:
         self.portkey_api_key = os.environ.get("PORTKEY_API_KEY", None)
 
         # Load user preferences
-        user_pref = db.query(UserPreferences).filter_by(user_id=user_id).first()
+        user_pref = db.query(UserPreferences).filter_by(
+            user_id=user_id).first()
         user_config = (
             user_pref.preferences if user_pref and user_pref.preferences else {}
         )
 
         # Create configurations based on user input (or fallback defaults)
-        self.chat_config = build_llm_provider_config(user_config, config_type="chat")
+        self.chat_config = build_llm_provider_config(
+            user_config, config_type="chat")
         self.inference_config = build_llm_provider_config(
             user_config, config_type="inference"
         )
@@ -387,7 +409,8 @@ class ProviderService:
 
     async def set_global_ai_provider(self, user_id: str, request: SetProviderRequest):
         """Update the global AI provider configuration with new model selections."""
-        preferences = self.db.query(UserPreferences).filter_by(user_id=user_id).first()
+        preferences = self.db.query(
+            UserPreferences).filter_by(user_id=user_id).first()
 
         if not preferences:
             preferences = UserPreferences(user_id=user_id, preferences={})
@@ -403,7 +426,8 @@ class ProviderService:
         # Update chat model if provided
         if request.chat_model:
             updated_preferences["chat_model"] = request.chat_model
-            self.chat_config = build_llm_provider_config(updated_preferences, "chat")
+            self.chat_config = build_llm_provider_config(
+                updated_preferences, "chat")
 
         # Update inference model if provided
         if request.inference_model:
@@ -423,7 +447,8 @@ class ProviderService:
         # Send analytics event
         if request.chat_model:
             PostHogClient().send_event(
-                user_id, "chat_model_change_event", {"model": request.chat_model}
+                user_id, "chat_model_change_event", {
+                    "model": request.chat_model}
             )
         if request.inference_model:
             PostHogClient().send_event(
@@ -508,7 +533,8 @@ class ProviderService:
             )
 
             # Default values
-            chat_provider = chat_model_id.split("/")[0] if chat_model_id else ""
+            chat_provider = chat_model_id.split(
+                "/")[0] if chat_model_id else ""
             chat_model_name = chat_model_id
 
             inference_provider = (
@@ -580,7 +606,8 @@ class ProviderService:
                 response = await acompletion(messages=messages, **params)
                 return response.choices[0].message.content
         except Exception as e:
-            logging.error(f"Error calling LLM: {e}, provider: {routing_provider}")
+            logging.error(
+                f"Error calling LLM: {e}, provider: {routing_provider}")
             raise e
 
     @robust_llm_call()
@@ -602,7 +629,8 @@ class ProviderService:
             if config.provider == "ollama":
                 # use openai client to call ollama because of https://github.com/BerriAI/litellm/issues/7355
                 client = instructor.from_openai(
-                    AsyncOpenAI(base_url="http://localhost:11434/v1", api_key="ollama"),
+                    AsyncOpenAI(base_url="http://localhost:11434/v1",
+                                api_key="ollama"),
                     mode=instructor.Mode.JSON,
                 )
                 response = await client.chat.completions.create(
@@ -614,7 +642,8 @@ class ProviderService:
                     **extra_params,
                 )
             else:
-                client = instructor.from_litellm(acompletion, mode=instructor.Mode.JSON)
+                client = instructor.from_litellm(
+                    acompletion, mode=instructor.Mode.JSON)
                 response = await client.chat.completions.create(
                     model=params["model"],
                     messages=messages,
@@ -636,7 +665,8 @@ class ProviderService:
         routing_provider = config.model.split("/")[0]
 
         # Get extra parameters and headers
-        extra_params, headers = self.get_extra_params_and_headers(routing_provider)
+        extra_params, headers = self.get_extra_params_and_headers(
+            routing_provider)
 
         if agent_type == AgentProvider.CREWAI:
             crewai_params = {"model": params["model"], **params}
@@ -709,7 +739,8 @@ class ProviderService:
                 case "openrouter":
                     # PORTKEY has a issue when used with openrouter here
                     return OpenAIModel(
-                        model_name=config.model.split("/")[-2] + "/" + model_name,
+                        model_name=config.model.split(
+                            "/")[-2] + "/" + model_name,
                         provider=OpenAIProvider(
                             api_key=api_key,
                             base_url="https://openrouter.ai/api/v1",
@@ -735,6 +766,15 @@ class ProviderService:
                 # OpenRouter uses OpenAI-compatible API
                 return OpenAIModel(
                     model_name="google/" + model_name,
+                    provider=OpenAIProvider(
+                        api_key=api_key,
+                        base_url="https://openrouter.ai/api/v1",
+                    ),
+                )
+            case "openrouter":
+                # OpenRouter uses OpenAI-compatible API
+                return OpenAIModel(
+                    model_name=config.model.split("/")[-2] + "/" + model_name,
                     provider=OpenAIProvider(
                         api_key=api_key,
                         base_url="https://openrouter.ai/api/v1",

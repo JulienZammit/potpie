@@ -44,6 +44,15 @@ MODEL_CONFIG_MAP = {
         "provider": "gemini",
         "default_params": {"temperature": 0.3},
     },
+    # Mistral / DevStral via OpenRouter
+    "openrouter/mistralai/devstral-small": {
+        "provider": "openrouter",
+        "default_params": {"temperature": 0.3, "max_tokens": 8000},
+    },
+    "openrouter/qwen/qwen3-8b": {
+        "provider": "openrouter",
+        "default_params": {"temperature": 0.3, "max_tokens": 8000},
+    },
 }
 
 

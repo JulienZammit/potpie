@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
+# Export all variables from .env automatically
+set -a
 source .env
+set +a
 
 # Set up Service Account Credentials
 export GOOGLE_APPLICATION_CREDENTIALS="./service-account.json"
@@ -43,7 +46,7 @@ fi
 alembic upgrade heads
 
 echo "Starting momentum application..."
-gunicorn --worker-class uvicorn.workers.UvicornWorker --workers 1 --timeout 1800 --bind 0.0.0.0:8001 --log-level debug app.main:app &
+gunicorn --worker-class uvicorn.workers.UvicornWorker --workers 1 --timeout 1800 --bind 0.0.0.0:8005 --log-level debug app.main:app &
 
 echo "Starting Celery worker"
 # Start Celery worker with the new setup
